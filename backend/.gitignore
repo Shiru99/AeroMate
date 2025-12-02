@@ -1,0 +1,16 @@
+.env
+/venv2
+__pycache__/
+*.pyc
+instance/
+.DS_Store
+*.sqlite3
+*.log
+.vscode/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+/staticfiles/
+
