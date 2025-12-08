@@ -30,7 +30,6 @@ if not st.session_state.user_id:
 
 # --- 3. Chat Interface (Only shows if logged in) ---
 else:
-    # Sidebar: Shows current user and allows logout
     with st.sidebar:
         st.write(f"Logged in as: **{st.session_state.user_id}**")
         if st.button("Logout"):

@@ -9,9 +9,7 @@ AeroMate Frontend is the user interface for the AeroMate AI-powered virtual assi
 - Requests
 - Virtualenv
 
-## Setup
+## Run
 
-1. python3 -m venv venv
-2. source venv/bin/activate
-3. pip install -r requirements.txt
-4. streamlit run app.py
+1. docker build -t aeromate-frontend .
+2. docker run -p 8501:8501 --env-file .env aeromate-frontend
