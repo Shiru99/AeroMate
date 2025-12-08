@@ -10,22 +10,19 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from typing import Annotated, TypedDict, List
 
-# 1. Load Environment Variables
+# Load Environment Variables
 load_dotenv()
 
-# Check if API Key exists
 if not os.getenv("GOOGLE_API_KEY"):
     print("⚠️  WARNING: GOOGLE_API_KEY is missing in your .env file!")
 
-# 2. Define the Graph State
-# This dictates what data passes between nodes.
+# Define the Graph State
 class State(TypedDict):
     # 'add_messages' means: when a node returns a message, append it to the list
     # rather than overwriting the whole list.
     messages: Annotated[List, add_messages]
 
 # 3. Initialize the Model
-# We use Gemini 1.5 Flash because it is fast and free-tier eligible.
 llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.2)
 
 # 4. Define the Nodes
@@ -60,7 +57,7 @@ app = FastAPI(title="AeroMate Backend")
 # Define the data format coming from Frontend
 class ChatRequest(BaseModel):
     message: str
-    thread_id: str  # Included for future use (Persistence)
+    thread_id: str
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
@@ -68,15 +65,10 @@ async def chat_endpoint(request: ChatRequest):
     API Endpoint that Frontend calls.
     """
     try:
-        # Prepare the input for the graph
-        # We wrap the user's string in a format LangGraph understands
         input_data = {"messages": [("user", request.message)]}
         
-        # Run the graph!
-        # This will jump through the nodes (Start -> Chatbot -> End)
         result = graph.invoke(input_data)
         
-        # Extract the text content from the last message (the AI's reply)
         ai_response = result["messages"][-1].content
         
         return {"response": ai_response}
@@ -86,6 +78,20 @@ async def chat_endpoint(request: ChatRequest):
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Entry point for running the script directly
+@app.get("/")
+async def home():
+    """
+    Simple check to see if the server is up.
+    """
+    return {"message": "AeroMate Backend is running!", "status": "active"}
+
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint for Docker/Kubernetes probes.
+    """
+    # You can add logic here later to check DB connection too
+    return {"status": "healthy"}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -8,3 +8,9 @@ AeroMate Backend is the server-side component of the AeroMate AI-powered virtual
 2. source venv/bin/activate
 3. pip install -r requirements.txt
 4. uvicorn app.app:app --reload
+
+
+## Run
+
+1. docker build -t aeromate-backend .
+2. docker run -p 8000:8000 --env-file .env aeromate-backend
