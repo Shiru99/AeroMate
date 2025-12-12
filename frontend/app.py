@@ -14,6 +14,30 @@ if "user_id" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# --- 2.1. Load Chat History Function ---
+def load_chat_history(user_id):
+    """
+    Fetches chat history from the backend for a specific user.
+    Returns a list of messages (empty if new user or error).
+    """
+    try:
+        url = f"{BACKEND_URL}/history/{user_id}"
+        response = requests.get(url)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("history", [])
+        else:
+            st.error(f"Error loading history: {response.text}")
+            return []
+            
+    except requests.exceptions.ConnectionError:
+        st.error("Cannot connect to Backend to load history. Is it running?")
+        return []
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {e}")
+        return []
+    
 # --- 2. Login Screen (The Gatekeeper) ---
 if not st.session_state.user_id:
     st.title("✈️ AeroMate Login")
@@ -25,7 +49,13 @@ if not st.session_state.user_id:
         submitted = st.form_submit_button("Start Chatting")
         
         if submitted and user_id_input:
+            # Show a spinner while we fetch data
+            with st.spinner("Syncing your travel history..."):
+                history = load_chat_history(user_id_input)
+                
+            # Update Session State
             st.session_state.user_id = user_id_input
+            st.session_state.messages = history
             st.rerun()
 
 # --- 3. Chat Interface (Only shows if logged in) ---
