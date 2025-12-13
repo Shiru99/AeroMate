@@ -95,14 +95,26 @@ else:
                     "message": prompt
                 }
 
-                # Call Backend
-                with requests.post(f"{BACKEND_URL}/chat", json=payload, stream=True) as response:
-                    
+                # # Call Backend
+                # with requests.post(f"{BACKEND_URL}/chat", json=payload, stream=True) as response:
+                #     if response.status_code == 200:
+                #         full_response = response.json().get("response", "No response text.")
+                #         message_placeholder.markdown(full_response)
+                #     else:
+                #         message_placeholder.error(f"Error {response.status_code}: {response.text}")
+                
+                # Call Backend with streaming
+                with requests.post(f"{BACKEND_URL}/chatstream", json=payload, stream=True) as response:
                     if response.status_code == 200:
-                        full_response = response.json().get("response", "No response text.")
+                        message_placeholder.empty()
+                        for chunk in response.iter_content(chunk_size=1024):
+                            if chunk:
+                                decoded_chunk = chunk.decode("utf-8")
+                                full_response += decoded_chunk
+                                message_placeholder.markdown(full_response + "▌")
+                        
                         message_placeholder.markdown(full_response)
                     else:
-                        
                         message_placeholder.error(f"Error {response.status_code}: {response.text}")
             
             except requests.exceptions.ConnectionError:
