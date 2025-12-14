@@ -16,6 +16,10 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import InMemorySaver
 
+from langgraph.prebuilt import ToolNode, tools_condition
+
+from .tools import get_web_search, get_stock_price, get_currency_rate, get_calculator, get_flight_details
+
 # ==========================================
 # 1. CONFIGURATION & ENVIRONMENT
 # ==========================================
@@ -56,13 +60,19 @@ class ChatState(TypedDict):
 # Initialize LLM
 llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=TEMPERATURE)
 
+tools = [ get_web_search, get_stock_price, get_currency_rate, get_calculator, get_flight_details]
+llm_with_tools = llm.bind_tools(tools)
+
+tool_node = ToolNode(tools)
+
 def chatbot_node(state: ChatState):
     """
     The main worker node. 
     Takes the conversation history, calls Gemini, and returns the response.
     """
     user_message = state["messages"]
-    response = llm.invoke(user_message)
+    # response = llm.invoke(user_message)
+    response = llm_with_tools.invoke(user_message)
     return {"messages": [response]}
 
 def build_graph():
@@ -71,9 +81,12 @@ def build_graph():
     
     # Add Nodes
     workflow.add_node("chatbot", chatbot_node)
+    workflow.add_node("tools", tool_node)
     
     # Add Edges
     workflow.add_edge(START, "chatbot")
+    workflow.add_conditional_edges("chatbot", tools_condition)
+    workflow.add_edge("tools", "chatbot")
     workflow.add_edge("chatbot", END)
     
     # Compile with Memory
@@ -186,6 +199,11 @@ async def get_chat_history(thread_id: str):
         # Format messages for Frontend (converting LangChain types to simple dicts)
         formatted_history = []
         for msg in messages:
+            if msg.type == "tool":
+                # print(f"Skipping tool message: {msg.name}")
+                continue
+            if msg.content.strip() == "":
+                continue
             role = "user" if msg.type == "human" else "assistant"
             formatted_history.append({
                 "role": role,
@@ -207,7 +225,7 @@ def print_context_memory(thread_id: str):
     snapshot = our_graph.get_state(config)
     print(f"Context Memory for thread '{thread_id}' ({len(snapshot.values['messages'])} msgs):")
     for m in snapshot.values['messages']:
-        print(f" - {m.type}: {m.content[:36]}...")
+        print(f" - {m.type}: {m.content[:360]}...")
 
 # ==========================================
 # 8. ENTRY POINT

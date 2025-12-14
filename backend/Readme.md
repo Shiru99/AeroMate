@@ -4,8 +4,8 @@ AeroMate Backend is the server-side component of the AeroMate AI-powered virtual
 
 ## Setup
 
-1. python3 -m venv venv
-2. source venv/bin/activate
+1. python3 -m venv v-env
+2. source v-env/bin/activate
 3. pip install -r requirements.txt
 4. uvicorn app.app:app --reload
 

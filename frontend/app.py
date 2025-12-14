@@ -84,43 +84,50 @@ else:
 
         # Call the Backend API
         with st.chat_message("assistant"):
-            message_placeholder = st.empty()
-            message_placeholder.markdown("Thinking...") 
+            
+            # --- CHANGE 1 & 2: Status Container with Loading Indicator ---
+            # This creates a box that shows a spinner and "Processing..."
+            # It will hold any tool logs if you decide to stream them later
+            status_container = st.status("🚀 Processing your request...")
+            
+            # Create a placeholder for the actual answer OUTSIDE the status container
+            # so the answer remains visible even when the status box collapses
+            answer_placeholder = st.empty()
             full_response = ""
             
             try:
-                # payload uses the User ID as the thread_id
-                payload = {
-                    "thread_id": st.session_state.user_id,
-                    "message": prompt
-                }
+                with status_container:
+                    payload = {
+                        "thread_id": st.session_state.user_id,
+                        "message": prompt
+                    }
 
-                # # Call Backend
-                # with requests.post(f"{BACKEND_URL}/chat", json=payload, stream=True) as response:
-                #     if response.status_code == 200:
-                #         full_response = response.json().get("response", "No response text.")
-                #         message_placeholder.markdown(full_response)
-                #     else:
-                #         message_placeholder.error(f"Error {response.status_code}: {response.text}")
-                
-                # Call Backend with streaming
-                with requests.post(f"{BACKEND_URL}/chatstream", json=payload, stream=True) as response:
-                    if response.status_code == 200:
-                        message_placeholder.empty()
-                        for chunk in response.iter_content(chunk_size=1024):
-                            if chunk:
-                                decoded_chunk = chunk.decode("utf-8")
-                                full_response += decoded_chunk
-                                message_placeholder.markdown(full_response + "▌")
-                        
-                        message_placeholder.markdown(full_response)
-                    else:
-                        message_placeholder.error(f"Error {response.status_code}: {response.text}")
+                    # Call Backend with streaming
+                    with requests.post(f"{BACKEND_URL}/chatstream", json=payload, stream=True) as response:
+                        if response.status_code == 200:
+                            for chunk in response.iter_content(chunk_size=1024):
+                                if chunk:
+                                    decoded_chunk = chunk.decode("utf-8")
+                                    full_response += decoded_chunk
+                                    # Update the answer placeholder (streaming effect)
+                                    answer_placeholder.markdown(full_response + "▌")
+                            
+                            # Final polish: remove cursor
+                            answer_placeholder.markdown(full_response)
+                            
+                            # --- Update Status to Complete ---
+                            status_container.update(label="Response Ready", state="complete", expanded=False)
+                            
+                        else:
+                            status_container.update(label="❌ Error", state="error")
+                            st.error(f"Error {response.status_code}: {response.text}")
             
             except requests.exceptions.ConnectionError:
-                message_placeholder.error("Cannot connect to Backend. Is it running?")
+                status_container.update(label="❌ Connection Failed", state="error")
+                st.error("Cannot connect to Backend. Is it running?")
             except Exception as e:
-                message_placeholder.error(f"An error occurred: {e}")
+                status_container.update(label="❌ System Error", state="error")
+                st.error(f"An error occurred: {e}")
 
         # Save assistant response to history
         if full_response:

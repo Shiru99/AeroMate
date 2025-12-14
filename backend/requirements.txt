@@ -3,3 +3,9 @@ uvicorn
 python-dotenv
 langchain-google-genai
 langgraph
+duckduckgo-search 
+yfinance
+google-search-results
+psutil
+langchain_community
+ddgs
