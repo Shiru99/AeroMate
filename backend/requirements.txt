@@ -9,3 +9,6 @@ google-search-results
 psutil
 langchain_community
 ddgs
+mcp
+sseclient-py
+httpx

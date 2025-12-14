@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import os
+import re
 
 # Configuration
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
@@ -74,7 +75,17 @@ else:
     # Display previous messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            content = message["content"]
+
+            video_match = re.search(r"(http://localhost:8000/assets/.*?\.mp4)", content)
+            
+            if video_match:
+                video_url = video_match.group(1)
+                clean_content = content.replace(video_match.group(0), "🎬")
+                st.markdown(clean_content)
+                st.video(video_url)
+            else:
+                st.markdown(content)
 
     # Handle User Input
     if prompt := st.chat_input("How can I help with your travel?"):
@@ -82,53 +93,61 @@ else:
         st.chat_message("user").markdown(prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # Call the Backend API
         with st.chat_message("assistant"):
             
-            # --- CHANGE 1 & 2: Status Container with Loading Indicator ---
-            # This creates a box that shows a spinner and "Processing..."
-            # It will hold any tool logs if you decide to stream them later
-            status_container = st.status("🚀 Processing your request...")
+            # 1. Create the placeholder FIRST so it sits at the top (optional)
+            # or creates the status box first. 
+            status_container = st.status("🚀 Processing your request...", expanded=True)
             
-            # Create a placeholder for the actual answer OUTSIDE the status container
-            # so the answer remains visible even when the status box collapses
+            # 2. Create the placeholder for the text response OUTSIDE the status box
             answer_placeholder = st.empty()
+            
             full_response = ""
+            video_url = None # Initialize variable to store URL found during streaming
             
             try:
+                # 3. Do the heavy lifting INSIDE the status container
                 with status_container:
                     payload = {
                         "thread_id": st.session_state.user_id,
                         "message": prompt
                     }
 
-                    # Call Backend with streaming
                     with requests.post(f"{BACKEND_URL}/chatstream", json=payload, stream=True) as response:
                         if response.status_code == 200:
                             for chunk in response.iter_content(chunk_size=1024):
                                 if chunk:
                                     decoded_chunk = chunk.decode("utf-8")
                                     full_response += decoded_chunk
-                                    # Update the answer placeholder (streaming effect)
+                                    # Update placeholder (streaming effect)
                                     answer_placeholder.markdown(full_response + "▌")
                             
-                            # Final polish: remove cursor
-                            answer_placeholder.markdown(full_response)
-                            
-                            # --- Update Status to Complete ---
+                            # Update status when done
                             status_container.update(label="Response Ready", state="complete", expanded=False)
-                            
                         else:
                             status_container.update(label="❌ Error", state="error")
                             st.error(f"Error {response.status_code}: {response.text}")
+
+                # Check for video URL
+                video_match = re.search(r"(http://localhost:8000/assets/.*?\.mp4)", full_response)
+                
+                if video_match:
+                    video_url = video_match.group(1)
+                    # Optional: Replace the raw URL with a nice icon or remove it
+                    clean_content = full_response.replace(video_match.group(0), "🎬")
+                    
+                    # Final update to remove cursor and clean text
+                    answer_placeholder.markdown(clean_content)
+                    
+                    # RENDER VIDEO HERE (Main Chat Scope)
+                    st.video(video_url)
+                else:
+                    # Just remove the cursor
+                    answer_placeholder.markdown(full_response)
             
-            except requests.exceptions.ConnectionError:
-                status_container.update(label="❌ Connection Failed", state="error")
-                st.error("Cannot connect to Backend. Is it running?")
             except Exception as e:
                 status_container.update(label="❌ System Error", state="error")
                 st.error(f"An error occurred: {e}")
 
-        # Save assistant response to history
         if full_response:
             st.session_state.messages.append({"role": "assistant", "content": full_response})

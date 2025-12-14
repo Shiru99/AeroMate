@@ -19,6 +19,9 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from .tools import get_web_search, get_stock_price, get_currency_rate, get_calculator, get_flight_details
+from .mcp import generate_manim_animation
+
+from fastapi.staticfiles import StaticFiles
 
 # ==========================================
 # 1. CONFIGURATION & ENVIRONMENT
@@ -41,6 +44,17 @@ if not TEMPERATURE:
 else:
     TEMPERATURE = float(TEMPERATURE)
 
+ASSETS_DIR = os.getenv("ASSETS_DIR")
+if not ASSETS_DIR:
+    print("⚠️  WARNING: ASSETS_DIR is missing in your .env file! Using default.")
+    ASSETS_DIR = "assets"
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+VIDEO_DIR = os.path.join(BASE_DIR, ASSETS_DIR)
+
+os.makedirs(VIDEO_DIR, exist_ok=True)
+
+
 # ==========================================
 # 2. DATA MODELS (SCHEMAS)
 # ==========================================
@@ -60,7 +74,7 @@ class ChatState(TypedDict):
 # Initialize LLM
 llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=TEMPERATURE)
 
-tools = [ get_web_search, get_stock_price, get_currency_rate, get_calculator, get_flight_details]
+tools = [ get_web_search, get_stock_price, get_currency_rate, get_calculator, get_flight_details, generate_manim_animation]
 llm_with_tools = llm.bind_tools(tools)
 
 tool_node = ToolNode(tools)
@@ -100,6 +114,8 @@ our_graph = build_graph()
 # 4. API SETUP
 # ==========================================
 app = FastAPI(title="AeroMate Backend")
+
+app.mount("/assets", StaticFiles(directory=VIDEO_DIR), name="assets")
 
 @app.get("/")
 async def home():

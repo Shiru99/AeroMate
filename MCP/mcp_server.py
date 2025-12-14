@@ -28,7 +28,7 @@ def execute_manim_code(manim_code: str) -> str:
         
         # Run Manim
         # -ql = Quality Low (faster rendering for testing), use -qh for high
-        cmd = [MANIM_EXECUTABLE, "-ql", "-p", script_path]
+        cmd = [MANIM_EXECUTABLE, "-qh", script_path]
         
         result = subprocess.run(
             cmd,
@@ -38,9 +38,19 @@ def execute_manim_code(manim_code: str) -> str:
         )
 
         if result.returncode == 0:
-            # Find the generated mp4 file
-            video_dir = os.path.join(tmpdir, "media", "videos", "scene", "480p15") # path depends on quality flags
-            return f"Execution successful. Files are located in: {tmpdir}"
+            video_path = None
+            for root, dirs, files in os.walk(tmpdir):
+                if "partial_movie_files" in root:
+                    continue
+                for file in files:
+                    if file.endswith(".mp4"):
+                        video_path = os.path.join(root, file)
+                        break
+            
+            if video_path:
+                return f"SUCCESS_VIDEO_PATH: {video_path}"
+            else:
+                return "Execution successful, but could not locate MP4 file."
         else:
             return f"Execution failed: {result.stderr}"
 
