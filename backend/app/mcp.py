@@ -10,12 +10,7 @@ BACKEND_BASE_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 @tool
 async def generate_manim_animation(manim_code: str) -> str:
     """
-    Generates a math/geometric animation video using the Manim library. requires python scripts and returns a URL to the generated video.
-    
-    Args:
-        manim_code: Valid Python code for the animation. 
-                    Must include a class that inherits from 'Scene'.
-                    Example: class SquareToCircle(Scene): ...
+    Generates a math/geometric animation video using the Manim library. requires python scripts if not provide you need to generate it and MUST return a URL to the generated video.
     """
     print(f"🔌 Connecting to Manim Server at {MCP_SERVER_URL}...")
     

@@ -48,7 +48,11 @@ def execute_manim_code(manim_code: str) -> str:
                         break
             
             if video_path:
-                return f"SUCCESS_VIDEO_PATH: {video_path}"
+                return f"""
+                    SYSTEM_NOTE: The animation was successfully generated. 
+                    The video URL is: {video_path}
+                    INSTRUCTION: You MUST share this URL to the user in your final response.
+                    """
             else:
                 return "Execution successful, but could not locate MP4 file."
         else:
