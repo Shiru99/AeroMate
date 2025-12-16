@@ -20,6 +20,8 @@ from langgraph.prebuilt import ToolNode, tools_condition
 
 from .tools import get_web_search, get_stock_price, get_currency_rate, get_calculator, get_flight_details
 from .mcp import generate_manim_animation
+from .ingest import create_vector_db
+from fastapi import BackgroundTasks
 
 from fastapi.staticfiles import StaticFiles
 
@@ -31,12 +33,8 @@ load_dotenv()
 if not os.getenv("GOOGLE_API_KEY"):
     print("⚠️  WARNING: GOOGLE_API_KEY is missing in your .env file!")
 
-MODEL_NAME = os.getenv("MODEL_NAME")
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.0-flash-lite")
 TEMPERATURE = os.getenv("TEMPERATURE")
-
-if not MODEL_NAME:
-    print("⚠️  WARNING: MODEL_NAME is missing in your .env file! Using default.")
-    MODEL_NAME = "gemini-2.0-flash-lite"
 
 if not TEMPERATURE:
     print("⚠️  WARNING: TEMPERATURE is missing in your .env file! Using default.")
@@ -44,10 +42,7 @@ if not TEMPERATURE:
 else:
     TEMPERATURE = float(TEMPERATURE)
 
-ASSETS_DIR = os.getenv("ASSETS_DIR")
-if not ASSETS_DIR:
-    print("⚠️  WARNING: ASSETS_DIR is missing in your .env file! Using default.")
-    ASSETS_DIR = "assets"
+ASSETS_DIR = os.getenv("ASSETS_DIR", "assets")
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 VIDEO_DIR = os.path.join(BASE_DIR, ASSETS_DIR)
@@ -85,8 +80,18 @@ def chatbot_node(state: ChatState):
     Takes the conversation history, calls Gemini, and returns the response.
     """
     user_message = state["messages"]
-    # response = llm.invoke(user_message)
-    response = llm_with_tools.invoke(user_message)
+
+    thread_id = state.get("configurable", {}).get("thread_id", "default_thread")
+    
+    trace_config = {
+        "run_name": f"{thread_id} - {time.strftime('%d-%m-%Y %H:%M:%S')}",
+        "tags": ["aeromate", "chatbot"],
+        "metadata": {
+            "model": "Gemini"
+        }
+    }
+    
+    response = llm_with_tools.invoke(user_message, config=trace_config)
     return {"messages": [response]}
 
 def build_graph():
@@ -231,6 +236,20 @@ async def get_chat_history(thread_id: str):
     except Exception as e:
         print(f"Error fetching history: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+# ==========================================
+# RAG - DOCUMENT INGESTION ENDPOINT
+# ==========================================
+
+@app.get("/admin/ingest")
+async def trigger_ingestion(background_tasks: BackgroundTasks):
+    """
+    Triggers the document ingestion process in the background.
+    Call this when you add new PDFs to the /docs folder.
+    """
+    # Run in background so the API doesn't hang
+    background_tasks.add_task(create_vector_db)
+    return {"message": "Ingestion started in background. Check server logs for progress."}
 
 # ==========================================
 # 7. UTILITIES

@@ -12,3 +12,8 @@ ddgs
 mcp
 sseclient-py
 httpx
+langchain
+langchain-chroma 
+pypdf
+chromadb
+langchain-core
