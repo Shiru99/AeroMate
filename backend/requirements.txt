@@ -17,3 +17,4 @@ langchain-chroma
 pypdf
 chromadb
 langchain-core
+pymupdf

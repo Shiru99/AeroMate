@@ -25,6 +25,8 @@ from fastapi import BackgroundTasks
 
 from fastapi.staticfiles import StaticFiles
 
+from .retriever import get_aviation_info
+
 # ==========================================
 # 1. CONFIGURATION & ENVIRONMENT
 # ==========================================
@@ -69,7 +71,7 @@ class ChatState(TypedDict):
 # Initialize LLM
 llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=TEMPERATURE)
 
-tools = [ get_web_search, get_stock_price, get_currency_rate, get_calculator, get_flight_details, generate_manim_animation]
+tools = [ get_web_search, get_stock_price, get_currency_rate, get_calculator, get_flight_details, generate_manim_animation, get_aviation_info]
 llm_with_tools = llm.bind_tools(tools)
 
 tool_node = ToolNode(tools)

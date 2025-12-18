@@ -3,7 +3,7 @@ from typing import List, Set
 import re
 
 # LangChain Imports
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
@@ -176,7 +176,7 @@ def load_and_process_documents(existing_files: Set[str]) -> List[Document]:
         print(f"📄 Loading: {filename}...")
         
         try:
-            loader = PyPDFLoader(file_path)
+            loader = PyMuPDFLoader(file_path)
             raw_docs = loader.load()
             
             keys_to_remove = ["producer", "creator", "creationdate", "moddate", "source"]
